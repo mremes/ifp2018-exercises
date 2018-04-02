@@ -36,9 +36,8 @@ years = [1982, 2004, 2012]
 -- and for other lists returns the length of the list.
 
 measure :: [String] -> Int
-measure ss 
-  | length ss == 0    = -1
-  | otherwise         = length ss
+measure [] = -1
+measure ss = length ss 
 
 -- Ex 3: define the function takeFinal, which returns the n last
 -- elements of the given list.
@@ -98,7 +97,7 @@ mymax measure a b =
 
 countPalindromes :: [String] -> Int
 countPalindromes ss =
-  let isPalindrome = \x -> x == reverse x
+  let isPalindrome s = s == reverse s
   in length $ filter isPalindrome ss
 
 -- Ex 8: Implement a function funny, that
@@ -154,7 +153,9 @@ powers n max = takeWhile (<=max) [ n^x | x <- [0..] ]
 --     ==> Avvt
 
 search :: (a->a) -> (a->Bool) -> a -> a
-search update check initial = until check update initial
+search update check initial
+  | check initial  = initial
+  | otherwise      = search update check (update initial)
 
 -- Ex 11: given numbers n and k, build the list of numbers n,n+1..k.
 -- Use recursion and the : operator to build the list.
@@ -169,13 +170,12 @@ fromTo n k
 --
 -- Ps. you'll probably need a recursive helper function
 
-sumsF i k 
-  | i < k        = []
-  | otherwise    = partialSum k : sumsF i (k+1)
-  where partialSum k = div (k*(k+1)) 2
-
 sums :: Int -> [Int]
-sums i = sumsF i 1
+sums i = sums' i 1
+  where partialSum k = div (k*(k+1)) 2
+        sums' i k
+          | i < k        = []
+          | otherwise    = partialSum k : sums' i (k+1)
 
 
 -- Ex 13: using list pattern matching and recursion, define a function
@@ -199,8 +199,9 @@ mylast def (x:xs) =
 -- library list functions.
 
 sorted :: [Int] -> Bool
+sorted [] = True
+sorted [a] = True
 sorted (x:xs) 
-  | length xs == 0    = True
   | x <= xs!!0        = sorted xs
   | otherwise         = False
 
@@ -210,11 +211,10 @@ sorted (x:xs)
 --   sumsOf [a,b]    ==>  [a,a+b]
 --   sumsOf []       ==>  []
 
-sumsOfH prev [] = []
-sumsOfH prev (x:xs) = prev+x : sumsOfH (prev+x) xs
-
 sumsOf :: [Int] -> [Int]
-sumsOf xs = sumsOfH 0 xs
+sumsOf xs = sumsOf' 0 xs
+  where sumsOf' prev [] = []
+        sumsOf' prev (x:xs) = prev+x : sumsOf' (prev+x) xs
 
 -- Ex 16: implement the function merge that merges two sorted lists of
 -- Ints into a sorted list
@@ -248,16 +248,13 @@ merge (x:xs) (y:ys) =
 -- Example:
 --   mergesort [4,1,3,2] ==> [1,2,3,4]
 
-mergeHelper :: [[Int]] -> [Int]
-mergeHelper [] = []
-mergeHelper [x] = x
-mergeHelper [x,y] = merge x y
-mergeHelper (x:x1:xs) = merge (merge x x1) (mergeHelper xs)
-
 mergesort :: [Int] -> [Int]
 mergesort [] = []
 mergesort [x] = [x]
-mergesort xs = mergeHelper $ map (:[]) xs
+mergesort xs = mergesort' $ map (:[]) xs
+  where mergesort' [] = []
+        mergesort' [x] = x
+        mergesort' (x:x1:xs) = merge (merge x x1) (mergesort' xs)
 
       
 
@@ -277,14 +274,11 @@ mergesort xs = mergeHelper $ map (:[]) xs
 --   in mymaximum comp 1 [1,4,6,100,0,3]
 --     ==> 0
 
-mymaxi cmp def [] cur = cur
-mymaxi cmp def (x:xs) cur =
-  let currentMax = if (cmp x cur) == GT then x else cur
-  in mymaxi cmp def xs currentMax
-
 mymaximum :: (a -> a -> Ordering) -> a -> [a] -> a
 mymaximum cmp def [] = def
-mymaximum cmp def (x:xs) = mymaxi cmp def xs x
+mymaximum cmp def (x:xs) = mymaximum' cmp def xs x
+  where mymaximum' cmp def [] cur = cur
+        mymaximum' cmp def (x:xs) cur = mymaximum' cmp def xs $ if (cmp x cur) == GT then x else cur
 
 -- Ex 19: define a version of map that takes a two-argument function
 -- and two lists. Example:
@@ -330,15 +324,13 @@ map2 f (a:as) (b:bs) = f a b : map2 f as bs
 -- Unfortunately the surprise might not work if you've implemented
 -- your interpreter correctly but weirdly :(
 
-interpreterX :: Integer -> Integer -> [String] -> [String]
-interpreterX x y [] = []
-interpreterX x y (cmd:cmds) =
-  case cmd of "up"     -> interpreterX x (y+1) cmds
-              "down"   -> interpreterX x (y-1) cmds
-              "left"   -> interpreterX (x-1) y cmds 
-              "right"  -> interpreterX (x+1) y cmds
-              "printX" -> (show x):(interpreterX x y cmds)
-              "printY" -> (show y):(interpreterX x y cmds)
-
 interpreter :: [String] -> [String]
-interpreter commands = interpreterX 0 0 commands
+interpreter commands = interpreter' 0 0 commands
+  where interpreter' x y [] = []
+        interpreter' x y (cmd:cmds) =
+          case cmd of "up"     -> interpreter' x (y+1) cmds
+                      "down"   -> interpreter' x (y-1) cmds
+                      "left"   -> interpreter' (x-1) y cmds
+                      "right"  -> interpreter' (x+1) y cmds
+                      "printX" -> (show x):(interpreter' x y cmds)
+                      "printY" -> (show y):(interpreter' x y cmds)
