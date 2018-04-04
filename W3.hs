@@ -17,7 +17,7 @@ module W3 where
 -- Remember that integer division can be done with the div function.
 
 safeDiv :: Integer -> Integer -> Maybe Integer
-safeDiv x y = undefined
+safeDiv x y = if  y == 0 then Nothing else Just $ div x y
 
 ------------------------------------------------------------------------------
 -- Ex 2: another variant of safe division. This time a succesful
@@ -28,7 +28,7 @@ safeDiv x y = undefined
 -- (replace 1234 with the value of x).
 
 eitherDiv :: Integer -> Integer -> Either String Integer
-eitherDiv x y = undefined
+eitherDiv x y = if y == 0 then Left $ show x ++ "/" ++ show y else Right $ div x y
 
 ------------------------------------------------------------------------------
 -- Ex 3: implement the function addEithers, which combines two values of type
@@ -43,9 +43,14 @@ eitherDiv x y = undefined
 -- addEithers (Right 1) (Left "fail") ==> Left "fail"
 -- addEithers (Left "boom") (Left "fail") ==> Left "boom"
 
-addEithers :: Either String Int -> Either String Int -> Either String Int
-addEithers a b = undefined
+isLeft (Left _) = True
+isLeft _ = False
 
+addEithers :: Either String Int -> Either String Int -> Either String Int
+addEithers a b
+  | isLeft a     = a
+  | isLeft b     = b
+  | otherwise    = Right $ (either length id a) + (either length id b)
 ------------------------------------------------------------------------------
 -- Ex 4: implement the function mapMaybe, which works a bit like a
 -- combined map & filter.
@@ -68,7 +73,14 @@ addEithers a b = undefined
 --   ==> []
 
 mapMaybe :: (a -> Maybe b) -> [a] -> [b]
-mapMaybe f xs = undefined
+
+
+mapMaybe f xs = [ x | Just x <- mapMaybe' f xs]
+  where mapMaybe' f [] = []
+        mapMaybe' f (x:xs) =
+          case f x of
+            Just y -> Just y : mapMaybe' f xs
+            Nothing -> mapMaybe' f xs
 
 ------------------------------------------------------------------------------
 -- Ex 5: define a datatype Person, which should contain the age (an
@@ -77,28 +89,27 @@ mapMaybe f xs = undefined
 -- Also define a Person value fred, and the functions getAge, getname,
 -- setAge and setName (see below).
 
-data Person = PersonUndefined
-  deriving Show
+data Person = Person String Int deriving Show
 
 -- fred is a person whose name is Fred and age is 90
 fred :: Person
-fred = undefined
+fred = Person "Fred" 90
 
 -- getName returns the name of the person
 getName :: Person -> String
-getName p = undefined
+getName (Person name _) = name
 
 -- getAge returns the age of the person
 getAge :: Person -> Int
-getAge p = undefined
+getAge (Person _ age) = age
 
 -- setName takes a person and returns a new person with the name changed
 setName :: String -> Person -> Person
-setName name p = undefined
+setName name (Person oldName age) = Person name age
 
 -- setAge does likewise for age
 setAge :: Int -> Person -> Person
-setAge age p = undefined
+setAge age (Person name oldAge) = Person name age
 
 ------------------------------------------------------------------------------
 -- Ex 6&7: define a datatype TwoCounters which contains two Int
@@ -114,27 +125,27 @@ setAge age p = undefined
 -- getB (incB (incA zeros))
 --   ==> 1
 
-data TwoCounters = Undefined
+data TwoCounters = TwoCounters Int Int deriving Show
 
 -- zeros is a TwoCounters value with both counters initialized to 0
 zeros :: TwoCounters
-zeros = undefined
+zeros = TwoCounters 0 0
 
 -- getA returns the value of the "A" counter
 getA :: TwoCounters -> Int
-getA tc = undefined
+getA (TwoCounters a _) = a
 
 -- getB returns the value of the "B" counter
 getB :: TwoCounters -> Int
-getB tc = undefined
+getB (TwoCounters _ b) = b
 
 -- incA increases the value of the "A" counter by one
 incA :: TwoCounters -> TwoCounters
-incA tc = undefined
+incA (TwoCounters a b) = TwoCounters (a+1) b
 
 -- incB does likewise for the "B" counter
 incB :: TwoCounters -> TwoCounters
-incB tc = undefined
+incB (TwoCounters a b) = TwoCounters a (b+1)
 
 ------------------------------------------------------------------------------
 -- Ex 8&9: define a datatype UpDown that represents a counter that can
@@ -156,25 +167,28 @@ incB tc = undefined
 -- get (tick (tick (toggle (tick zero))))
 --   ==> -1
 
-data UpDown = UpDownUndefined1 | UpDownUndefined2
+data UpDown = UpDownInc Int | UpDownDec Int
 
 -- zero is an increasing counter with value 0
 zero :: UpDown
-zero = undefined
+zero = UpDownInc 0 
 
 -- get returns the counter value
 get :: UpDown -> Int
-get ud = undefined
+get (UpDownInc a) = a
+get (UpDownDec a) = a
 
 -- tick increases an increasing counter by one or decreases a
 -- decreasing counter by one
 tick :: UpDown -> UpDown
-tick ud = undefined
+tick (UpDownInc a) = UpDownInc (a+1)
+tick (UpDownDec a) = UpDownDec (a-1)
 
 -- toggle changes an increasing counter into a decreasing counter and
 -- vice versa
 toggle :: UpDown -> UpDown
-toggle ud = undefined
+toggle (UpDownInc a) = (UpDownDec a)
+toggle (UpDownDec a) = (UpDownInc a)
 
 --------------------------------------------------------------------------------
 -- The next exercises use the binary tree type defined like this:
@@ -187,14 +201,16 @@ data Tree a = Leaf | Node a (Tree a) (Tree a)
 -- because the tree might be empty (i.e. just a Leaf)
 
 valAtRoot :: Tree a -> Maybe a
-valAtRoot t = undefined
+valAtRoot Leaf = Nothing
+valAtRoot (Node a b c) = Just a
 
 ------------------------------------------------------------------------------
 -- Ex 11: compute the size of a tree, that is, the number of Node
 -- constructors in it
 
 treeSize :: Tree a -> Int
-treeSize t = undefined
+treeSize Leaf = 0
+treeSize (Node a b c) = 1 + (treeSize b) + (treeSize c)
 
 ------------------------------------------------------------------------------
 -- Ex 12: get the leftmost value in the tree. The return value is
@@ -213,8 +229,9 @@ treeSize t = undefined
 --   ==> Just 2
 
 leftest :: Tree a -> Maybe a
-leftest t = undefined
-
+leftest Leaf = Nothing
+leftest (Node a Leaf c) = Just a
+leftest (Node a b c) = leftest b
 ------------------------------------------------------------------------------
 -- Ex 13: implement map for trees.
 --
@@ -225,7 +242,8 @@ leftest t = undefined
 --   ==> (Node 2 (Node 3 Leaf Leaf) (Node 4 Leaf Leaf))
 
 mapTree :: (a -> b) -> Tree a -> Tree b
-mapTree f t = undefined
+mapTree f Leaf = Leaf
+mapTree f (Node a b c) = (Node (f a) (mapTree f b) (mapTree f c))
 
 ------------------------------------------------------------------------------
 -- Ex 14: insert the given value into the leftmost possible place. You
@@ -251,8 +269,8 @@ mapTree f t = undefined
 
 
 insertL :: a -> Tree a -> Tree a
-insertL x t = undefined
-
+insertL x Leaf = (Node x Leaf Leaf)
+insertL x (Node a b c) = (Node a (insertL x b) c)
 ------------------------------------------------------------------------------
 -- Ex 15: implement the function measure, that takes a tree and
 -- returns a tree with the same shape, but with the value at every
@@ -279,7 +297,8 @@ insertL x t = undefined
 
 
 measure :: Tree a -> Tree Int
-measure t = undefined
+measure Leaf = Leaf
+measure (Node a b c) = Node (1 + (treeSize b) + (treeSize c)) (measure b) (measure c)
 
 ------------------------------------------------------------------------------
 -- Ex 16: the standard library function
@@ -299,13 +318,13 @@ mysum :: [Int] -> Int
 mysum is = foldr sumf 0 is
 
 sumf :: Int -> Int -> Int
-sumf x y = undefined
+sumf x y = x + y
 
 mylength :: [a] -> Int
 mylength xs = foldr lengthf 0 xs
 
 lengthf :: a -> Int -> Int
-lengthf x y = undefined
+lengthf x y = 1 + y
 
 ------------------------------------------------------------------------------
 -- Ex 17: implement the function foldTree that works like foldr, but
@@ -339,7 +358,8 @@ treeLeaves :: Tree a -> Int
 treeLeaves t = foldTree leaft 1 t
 
 foldTree :: (a -> b -> b -> b) -> b -> Tree a -> b
-foldTree f x t = undefined
+foldTree f x Leaf = x
+foldTree f x (Node a b c) = f a (foldTree f x b) (foldTree f x c)
 
 ------------------------------------------------------------------------------
 -- Ex 18: You'll find a Color datatype below. It has the three basic
@@ -375,4 +395,14 @@ data Color = Red | Green | Blue | Mix Color Color | Darken Double Color
   deriving Show
 
 rgb :: Color -> [Double]
-rgb col = undefined
+
+rgb Red = [1,0,0]
+rgb Green = [0,1,0]
+rgb Blue = [0,0,1]
+
+rgb (Darken a b) = map darkenFn (rgb b)
+  where darkenFn x = (1-a) * x
+
+rgb (Mix a b) = zipWith mix_fn (rgb a) (rgb b)
+  where mix_fn a b = min 1 (a + b)
+
