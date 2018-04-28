@@ -26,14 +26,16 @@ import System.IO
 -- first line should be HELLO and the second one WORLD
 
 hello :: IO ()
-hello = undefined
+hello = do
+  putStrLn "HELLO"
+  putStrLn "WORLD"
 
 ------------------------------------------------------------------------------
 -- Ex 2: define the IO operation greet that takes a name as an
 -- argument and prints a line "HELLO name".
 
 greet :: String -> IO ()
-greet name = undefined
+greet name = putStrLn $ "HELLO " ++ name
 
 ------------------------------------------------------------------------------
 -- Ex 3: define the IO operation greet2 that reads a name from the
@@ -43,7 +45,9 @@ greet name = undefined
 -- Try to use the greet operation in your solution.
 
 greet2 :: IO ()
-greet2 = undefined
+greet2 = do
+  name <- getLine
+  greet name
 
 ------------------------------------------------------------------------------
 -- Ex 4: define the IO operation getSum that reads two numbers, on
@@ -52,14 +56,20 @@ greet2 = undefined
 -- Remember the operation readLn.
 
 getSum :: IO Int
-getSum = undefined
+getSum = do
+  a <- readLn
+  b <- readLn
+  return $ a + b
+
 
 ------------------------------------------------------------------------------
 -- Ex 5: define the IO operation readWords n which reads n lines from
 -- the user and returns them in alphabetical order.
 
 readWords :: Int -> IO [String]
-readWords n = undefined
+readWords n = do
+  words <- replicateM n getLine
+  return $ sort words
 
 ------------------------------------------------------------------------------
 -- Ex 6: define the IO operation readUntil f, which reads lines from
@@ -71,7 +81,14 @@ readWords n = undefined
 -- recursive helper operation).
 
 readUntil :: (String -> Bool) -> IO [String]
-readUntil f = undefined
+readUntil f = do
+  x <- getLine
+  if (f x) 
+  then do 
+    return [] 
+  else do
+    xs <- readUntil f
+    return $ x:xs
 
 ------------------------------------------------------------------------------
 -- Ex 7: isums n should read n numbers from the user and return their
@@ -81,7 +98,15 @@ readUntil f = undefined
 -- Reminder: do not use IORef
 
 isums :: Int -> IO Int
-isums n = undefined
+isums n = isums n 0
+  where isums n cur = 
+          if n == 0 then
+            return cur
+          else do
+            x <- readLn
+            newCur <- return $ cur + x
+            print newCur
+            isums (n-1) newCur
 
 ------------------------------------------------------------------------------
 -- Ex 8: when is a useful function, but its first argument has type
@@ -89,7 +114,9 @@ isums n = undefined
 -- argument has type IO Bool.
 
 whenM :: IO Bool -> IO () -> IO ()
-whenM cond op = undefined
+whenM cond op = do
+  x <- cond
+  when x op
 
 ------------------------------------------------------------------------------
 -- Ex 9: implement the while loop. while condition operation should
@@ -107,7 +134,14 @@ whenM cond op = undefined
 -- This prints YAY! as long as the user keeps answering Y
 
 while :: IO Bool -> IO () -> IO ()
-while cond op = undefined
+while cond op = do
+  res <- cond
+  if res then 
+    do
+      op
+      while cond op
+  else 
+    return ()
 
 ------------------------------------------------------------------------------
 -- Ex 10: given a string and an IO operation, print the string, run
@@ -127,7 +161,11 @@ while cond op = undefined
 --     4. returns the line read from the user
 
 debug :: String -> IO a -> IO a
-debug s op = undefined
+debug s op = do
+  putStrLn s
+  res <- op
+  putStrLn s
+  return res
 
 ------------------------------------------------------------------------------
 -- Ex 11: Reimplement mapM_ (specialized to the IO type) using
@@ -140,7 +178,10 @@ debug s op = undefined
 -- Remember to use `return ()` so that you get the type right!
 
 mymapM_ :: (a -> IO b) -> [a] -> IO ()
-mymapM_ = undefined
+myMapM_ op [] = return ()
+mymapM_ op (val:vals) = do
+  op val
+  mymapM_ op vals
 
 ------------------------------------------------------------------------------
 -- Ex 12: Reimplement the function forM using pattern matching and
