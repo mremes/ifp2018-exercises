@@ -225,8 +225,7 @@ lengthAndSum (x:xs) = do
 -- PS. Order of the list in the state doesn't matter
 
 oddUpdate :: Eq a => a -> State [a] ()
-oddUpdate x = modify $ \xs -> case elemIndex x xs of Nothing -> x:xs
-                                                     Just _ ->  delete x xs
+oddUpdate x = modify $ \xs -> if elem x xs then delete x xs else x:xs
 
 ------------------------------------------------------------------------------
 -- Ex 8: Define the operation oddsOp, so that the function odds
@@ -374,7 +373,11 @@ routeExists :: [[Int]] -> Int -> Int -> Bool
 routeExists cities i j = j `elem` execState (dfs cities i) []
 
 dfs :: [[Int]] -> Int -> State [Int] ()
-dfs cities i = undefined
+dfs cities i = do
+  modify $ \x -> if not $ elem i x then i:x else x
+  visited <- get
+  mapM_ (dfs cities) $ filter (\x -> not $ elem x visited) $ cities!!i
+  return ()
 
 ------------------------------------------------------------------------------
 -- Ex 13: define the function orderedPairs that returns all pairs
@@ -389,7 +392,10 @@ dfs cities i = undefined
 -- PS. once again the tests don't care about the order of results
 
 orderedPairs :: [Int] -> [(Int,Int)]
-orderedPairs xs = undefined
+orderedPairs xs = do
+  a <- xs
+  b <- xs
+  if (a<b) && (elemIndex a xs) < (Just $ last $ elemIndices b xs) then [(a,b)] else []
 
 ------------------------------------------------------------------------------
 -- Ex 14: Using the list monad, produce a list of all pairs of
@@ -407,7 +413,10 @@ orderedPairs xs = undefined
 -- PS. the order of the returned list does not matter
 
 pairs :: Eq a => [a] -> [(a,a)]
-pairs xs = undefined
+pairs xs = do
+  a <- xs
+  b <- xs
+  if (a/=b) then [(a,b)] else []
 
 ------------------------------------------------------------------------------
 -- Ex 15: the standard library defines the function
@@ -434,7 +443,12 @@ sumNotTwice :: [Int] -> Int
 sumNotTwice xs = fst $ runState (foldM fsum 0 xs) []
 
 fsum :: Int -> Int -> State [Int] Int
-fsum acc x = undefined
+fsum acc x = do
+  r <- get
+  modify (x:)
+  return $ if elem x r
+           then acc
+           else acc+x
 
 ------------------------------------------------------------------------------
 -- Ex 16: here is the Result type from last week. Implement a Monad
@@ -474,7 +488,12 @@ instance Applicative Result where
   (<*>) = ap
 
 instance Monad Result where
-  -- implement return and >>=
+  return = MkResult
+  fail s = Failure s
+
+  MkResult x >>= k = k x
+  NoResult >>= k = NoResult
+  Failure s >>= k = Failure s
 
 ------------------------------------------------------------------------------
 -- Ex 17&18: Here is the type SL that combines the State and Logger
@@ -524,7 +543,8 @@ modifySL :: (Int->Int) -> SL ()
 modifySL f = SL (\s -> ((),f s,[]))
 
 instance Functor SL where
-  -- implement fmap
+--  fmap f k = let (a, i, s) = runSL k 1
+--             in SL (\x -> (f a, x+1, s))
 
 -- again, disregard this
 instance Applicative SL where
@@ -532,4 +552,6 @@ instance Applicative SL where
   (<*>) = ap
 
 instance Monad SL where
-  -- implement return and >>=
+--  return x = SL (\s -> (), x, [])
+--  SL a >>= k =
+-- implement return and >>=
